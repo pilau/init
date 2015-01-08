@@ -20,8 +20,8 @@ $pi_themes_dir = getcwd() . '/wp-content/themes';
 $pi_replace_values = array();
 
 // Check for stash file - indicates incomplete process
-if ( file_exists( '.pi-stash' ) ) {
-	$pi_stash = unserialize( file_get_contents( '.pi-stash' ) );
+if ( file_exists( 'wp-content/.pi-stash' ) ) {
+	$pi_stash = unserialize( file_get_contents( 'wp-content/.pi-stash' ) );
 	$pi_replace_values = $pi_stash['replace_values'];
 }
 
@@ -33,18 +33,25 @@ if ( isset( $_GET['pi-step'] ) ) {
 	$pi_step = (int) $pi_stash['step'];
 }
 
-// Is WP present?
+// Is WP present and installed?
 $pi_wp_present = false;
+$pi_wp_installed = false;
+$pi_plugins_config = null;
+$pi_plugin_infos = null;
 if ( file_exists( 'wp-load.php' ) ) {
-	// Load it in case anything's needed
-	require_once( 'wp-load.php' );
 	$pi_wp_present = true;
+	if ( $pi_step > 2 ) {
+		$pi_wp_installed = true;
+		require_once( 'wp-load.php' );
+		$pi_plugins_config = get_option( 'pi_plugins_config' );
+		$pi_plugin_infos = get_option( 'pi_plugin_infos' );
+	}
 }
 
 // Get info on installed plugins?
 $pi_installed_plugins = null;
 $pi_activated_plugins = null;
-if ( $pi_step > 4 ) {
+if ( $pi_step > 3 ) {
 	require_once( 'wp-admin/includes/plugin.php' ); // wp-load.php doesn't seem to include this
 	$pi_installed_plugins_data = get_plugins();
 	$pi_activated_plugins = wp_get_active_and_valid_plugins();
@@ -78,6 +85,15 @@ $pi_plugin_infos_defaults = array(
 		'external_url'      => 'http://www.gravityforms.com/',
 	),
 	array(
+		'name'				=> 'GitHub Updater',
+		'slug'				=> 'github-updater',
+		'source'            => 'https://github.com/afragen/github-updater/archive/develop.zip',
+		'required'			=> false,
+		'force_activation'	=> false,
+		'is_automatic'		=> false,
+		'external_url'      => 'https://github.com/afragen/github-updater',
+	),
+	array(
 		'name'				=> 'Developer\'s Custom Fields',
 		'slug'				=> 'developers-custom-fields',
 		'required'			=> true,
@@ -108,13 +124,6 @@ $pi_plugin_infos_defaults = array(
 	array(
 		'name'				=> 'Members',
 		'slug'				=> 'members',
-		'required'			=> true,
-		'force_activation'	=> true,
-		'is_automatic'		=> true,
-	),
-	array(
-		'name'				=> 'SEO Slugs',
-		'slug'				=> 'seo-slugs',
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
@@ -379,7 +388,7 @@ if ( isset( $_POST['action'] ) ) {
 				'step'				=> 2,
 				'replace_values'	=> $pi_replace_values
 			);
-			file_put_contents( '.pi-stash', serialize( $pi_stash ) );
+			file_put_contents( 'wp-content/.pi-stash', serialize( $pi_stash ) );
 
 			/*
 			 * BY THIS POINT:
@@ -406,6 +415,7 @@ if ( isset( $_POST['action'] ) ) {
 
 			// Mimic WP install
 			define( 'WP_INSTALLING', true );
+			require_once( 'wp-load.php' );
 			require_once( ABSPATH . 'wp-admin/includes/upgrade.php' );
 			require_once( ABSPATH . 'wp-admin/includes/translation-install.php' );
 			require_once( ABSPATH . WPINC . '/wp-db.php' );
@@ -431,6 +441,15 @@ if ( isset( $_POST['action'] ) ) {
 			update_option( 'default_comment_status', ( isset( $pi_replace_values['wp-default_comment_status'] ) ? 'open' : 'closed' ) );
 			update_option( 'uploads_use_yearmonth_folders', ( isset( $pi_replace_values['wp-uploads_use_yearmonth_folders'] ) ? '1' : '' ) );
 			update_option( 'permalink_structure', $pi_replace_values['wp-permalink_structure'] );
+
+			// Update the name for the admin user
+			$pi_name_parts = explode( ' ', $pi_replace_values['theme-author'] );
+			wp_update_user( array(
+				'ID'			=> 1,
+				'display_name'	=> $pi_replace_values['theme-author'],
+				'first_name'	=> $pi_name_parts[0],
+				'last_name'		=> ( count( $pi_name_parts ) > 1 ) ? $pi_name_parts[1] : '',
+			));
 
 			// Home / blog pages
 			$pi_blog_page_title = $pi_replace_values['theme-rename-posts-news'] ? 'News' : 'Blog';
@@ -480,7 +499,7 @@ if ( isset( $_POST['action'] ) ) {
 				'step'				=> 3,
 				'replace_values'	=> $pi_replace_values
 			);
-			file_put_contents( '.pi-stash', serialize( $pi_stash ) );
+			file_put_contents( 'wp-content/.pi-stash', serialize( $pi_stash ) );
 
 			/*
 			 * BY THIS POINT:
@@ -497,8 +516,36 @@ if ( isset( $_POST['action'] ) ) {
 			break;
 		}
 
-		// Plugin installation
+		// Plugin configuration
+		/*
+		 * Plugins are 'configured' before installation, because we set up a hook to trigger when
+		 * plugins are activated first, and to apply configuration then.
+		 *
+		 * In order to process config options that are set here, you need to extend the code in
+		 * Pilau Starter: inc/config.php
+		 *
+		 */
 		case 3: {
+
+			// Store config options in database ready for hook in child theme
+			$pi_plugins_config = $_POST;
+			unset( $pi_plugins_config[ 'action' ] );
+			update_option( 'pi_plugins_config', $pi_plugins_config );
+
+			/*
+			 * BY THIS POINT:
+			 * - Plugin configuration is set and ready
+			 */
+
+			// Next step
+			header( 'Location: pilau-init.php?pi-step=4' );
+			exit;
+
+			break;
+		}
+
+		// Plugin installation
+		case 4: {
 			//echo '<pre>'; print_r( $_POST ); echo '</pre>'; exit;
 
 			// Gather plugin infos
@@ -519,66 +566,84 @@ if ( isset( $_POST['action'] ) ) {
 
 			}
 
-			// Store in file
-			file_put_contents( '.pi-plugin-infos', serialize( $pi_plugin_infos ) );
+			// Store in database
+			update_option( 'pi_plugin_infos', $pi_plugin_infos );
 
 			/*
 			 * BY THIS POINT:
-			 * - The .pi-plugin-infos file will have been created, containing the details for the TMG plugin script
+			 * - The pi_plugin_infos database option will have been created, containing the details for the TMG plugin script
 			 */
 
-			// Stash
-			$pi_stash = array(
-				'step'				=> 4,
-				'replace_values'	=> $pi_replace_values
-			);
-			file_put_contents( '.pi-stash', serialize( $pi_stash ) );
-
 			// Next step
-			header( 'Location: pilau-init.php?pi-step=4' );
+			header( 'Location: pilau-init.php?pi-step=5' );
 			exit;
 
 			break;
 		}
 
-		// 4 omitted - that's just user actions in WP admin
+		// Nothing to do for 5...
 
-		// Plugin configuration
-		case 5: {
+		// Further theme initialisation
+		case 6: {
 
-			// Values for plugin config already set
-			if ( in_array( 'wordpress-seo', $pi_activated_plugins ) ) {
-				$pi_temp = get_option( 'wpseo_social' );
-				$pi_temp['twitter_site'] = $pi_replace_values['theme-twitter-screen-name'];
-				update_option( 'wpseo_social', $pi_temp );
+			// Initialise pages to be locked with Home and maybe News
+			$pi_lock_pages = array( 2 );
+			if ( $pi_pages_for_posts = get_option( 'page_for_posts' ) ) {
+				$pi_lock_pages[] = $pi_pages_for_posts;
 			}
 
-			/*
-			 * BY THIS POINT:
-			 * - Plugin configuration is done
-			 */
+			// Go through all submitted values
+			foreach ( $_POST as $pi_key => $pi_value ) {
+				$pi_key_parts = explode( '-', $pi_key );
 
-			// Stash
-			$pi_stash = array(
-				'step'				=> 4,
-				'replace_values'	=> $pi_replace_values
-			);
-			file_put_contents( '.pi-stash', serialize( $pi_stash ) );
+				if ( $pi_key_parts[0] == 'page' ) {
 
-			// Next step
-			header( 'Location: pilau-init.php?pi-step=6' );
-			exit;
+					// Other pages
+					if ( $pi_key_parts[1] == 'others' ) {
 
-			break;
-		}
+						// Go through list
+						foreach ( explode( ',', $pi_value ) as $pi_other_page_title ) {
 
-		// Advanced theme config
-		case 10: {
+							// Hacky way of using WPSEO stopwords removal
+							$pi_post_name = trim( $pi_other_page_title );
+							if ( class_exists( 'WPSEO_Admin' ) ) {
+								$_POST['post_title'] = 'Fart and stuff';
+								$pi_wpseo_admin = new WPSEO_Admin;
+								$pi_post_name = $pi_wpseo_admin->remove_stopwords_from_slug( null );
+							}
 
-			// Default pages
-			// privacy
-			// contact
-			// about
+							$pi_new_post_id = wp_insert_post( array(
+								'post_title'		=> trim( $pi_other_page_title ),
+								'post_name'			=> $pi_post_name,
+								'post_status'		=> 'publish',
+								'post_type'			=> 'page',
+							));
+							$pi_lock_pages[] = $pi_new_post_id;
+						}
+
+					} else {
+
+						// Standard pages
+						$pi_new_post_id = wp_insert_post( array(
+							'post_title'	=> ucfirst( $pi_key_parts[1] ),
+							'post_name'		=> $pi_key_parts[1],
+							'post_status'	=> 'publish',
+							'post_type'		=> 'page',
+						));
+						$pi_lock_pages[] = $pi_new_post_id;
+
+					}
+
+				}
+
+			}
+
+			// Pages to be locked?
+			if ( $pi_lock_pages ) {
+				$pi_current_locked_pages = get_option( 'SLT_LockPages_options' );
+				$pi_current_locked_pages['slt_lockpages_locked_pages'] = $pi_current_locked_pages['slt_lockpages_locked_pages'] . ',' . implode( ',', $pi_lock_pages );
+				update_option( 'SLT_LockPages_options', $pi_current_locked_pages );
+			}
 
 			/*
 			 * BY THIS POINT:
@@ -586,7 +651,11 @@ if ( isset( $_POST['action'] ) ) {
 			 */
 
 			// Clean up
-			unlink( '.pi-stash' );
+			unlink( 'wp-content/.pi-stash' );
+
+			// Final screen
+			header( 'Location: pilau-init.php?pi-step=100' );
+			exit;
 
 			break;
 		}
@@ -737,6 +806,7 @@ if ( isset( $_POST['action'] ) ) {
 		}
 		.button:hover, .button:focus {
 			background: #1e8cbe;
+			color: #fff;
 			border-color: #0074a2;
 		}
 	</style>
@@ -767,6 +837,18 @@ if ( isset( $_POST['action'] ) ) {
 
 
 <?php } else { ?>
+
+
+	<?php if ( $pi_step > 2 && $pi_replace_values['wp-username'] ) { ?>
+
+		<p>You can now <a href="wp-login.php" target="_blank">log into WordPress</a>:</p>
+		<ul>
+			<li><b>Username:</b> <?php echo $pi_replace_values['wp-username']; ?></li>
+			<li><b>Password:</b> <?php echo $pi_replace_values['wp-password']; ?></li>
+		</ul>
+
+	<?php } ?>
+
 
 	<?php if ( $pi_step == 1 ) { ?>
 
@@ -886,42 +968,20 @@ if ( isset( $_POST['action'] ) ) {
 	<?php } else if ( $pi_step == 3 ) { ?>
 
 
-		<p>You can now <a href="wp-login.php" target="_blank">log into WordPress</a>:</p>
-		<ul>
-			<li><b>Username:</b> <?php echo $pi_replace_values['wp-username']; ?></li>
-			<li><b>Password:</b> <?php echo $pi_replace_values['wp-password']; ?></li>
-		</ul>
+		<h1>3. Configuring plugins</h1>
 
-		<h1>3. Installing plugins</h1>
+		<p>We set configuration options for plugins first because some plugins might not be activated straight away. So there's a hook in the child theme to check when plugins are activated for the first time. Then, if there's configuration options stored, they're applied.</p>
 
-		<p>The settings here will be used to create a file in the root, <code>.pi-plugin-infos</code>, ready for the <a href="http://tgmpluginactivation.com/">TMG Plugin Activation</a> class included in the child theme to read.</p>
-
-		<p>In the next step, you'll go into WordPress admin to run the TMG plugin script. In the step after that, you'll do some basic configuration for activated plugins.</p>
+		<p>Just ignore any options for plugins you won't be using.</p>
 
 		<form action="?pi-step=3" method="post">
 
-			<table>
-				<thead>
-					<tr>
-						<th scope="col">Plugin</th>
-						<th scope="col"><dfn title="Check to install">Install?</dfn></th>
-						<th scope="col"><dfn title="Check to activate on installation">Activate?</dfn></th>
-						<th scope="col"><dfn title="Check to force activation">Required?</dfn></th>
-					</tr>
-				</thead>
-				<tbody>
-					<?php $alt = 0; ?>
-					<?php foreach ( $pi_plugin_infos_defaults as $pi_plugin_infos_default ) { ?>
-						<tr class="<?php echo $alt ? 'alt' : ''; ?>">
-							<td><b><label for="install-<?php echo $pi_plugin_infos_default['slug']; ?>"><?php echo $pi_plugin_infos_default['name']; ?></label></b></td>
-							<td class="checkbox"><input type="checkbox" name="install[<?php echo $pi_plugin_infos_default['slug']; ?>]" id="install-<?php echo $pi_plugin_infos_default['slug']; ?>"<?php if ( ! empty( $pi_plugin_infos_default['required'] ) ) echo ' checked'; ?>></td>
-							<td class="checkbox"><input type="checkbox" name="activate[<?php echo $pi_plugin_infos_default['slug']; ?>]"<?php if ( ! empty( $pi_plugin_infos_default['is_automatic'] ) ) echo ' checked'; ?>></td>
-							<td class="checkbox"><input type="checkbox" name="required[<?php echo $pi_plugin_infos_default['slug']; ?>]"<?php if ( ! empty( $pi_plugin_infos_default['force_activation'] ) ) echo ' checked'; ?>></td>
-						</tr>
-						<?php $alt = 1 - $alt; ?>
-					<?php } ?>
-				</tbody>
-			</table>
+			<h3>Members</h3>
+			<ol>
+				<?php
+				pi_form_field( 'members-super-editor', 'Create Super Editor role?', 'checkbox', false, '', true );
+				?>
+			</ol>
 
 			<div class="buttons">
 				<input type="submit" value="Submit" class="button">
@@ -934,40 +994,34 @@ if ( isset( $_POST['action'] ) ) {
 	<?php } else if ( $pi_step == 4 ) { ?>
 
 
-		<h1>4. Installing plugins - continued</h1>
+		<h2>4. Installing plugins - preferences</h2>
 
-		<ol>
-			<li>Now, go to <a href="http://pilau-init.localhost/wp-admin/themes.php?page=tgmpa-install-plugins">the TMG Plugin Activation page</a>.</li>
-			<li>Install all the plugins listed there.</li>
-		</ol>
+		<p>The preferences set here will be stored in the database ready for the <a href="http://tgmpluginactivation.com/">TMG Plugin Activation</a> class included in the child theme to read.</p>
 
-		<p><a href="?pi-step=5" class="button">Continue...</a></p>
+		<form action="?pi-step=4" method="post">
 
-
-	<?php } else if ( $pi_step == 5 ) { ?>
-
-
-		<h1>5. Configuring plugins</h1>
-
-		<form action="?pi-step=5" method="post">
-
-			<?php if ( in_array( 'members', $pi_activated_plugins ) ) { ?>
-				<h2>Members</h2>
-				<ol>
-					<?php
-					pi_form_field( 'members-super-editor', 'Create Super Editor role?', 'checkbox', false, '', true );
-					?>
-				</ol>
-			<?php } ?>
-
-			<?php if ( in_array( 'wordpress-seo', $pi_activated_plugins ) ) { ?>
-				<h2>WordPress SEO</h2>
-				<ol>
-					<?php
-					pi_form_field( 'members-super-editor', 'Create Super Editor role?', 'checkbox', false, '', true );
-					?>
-				</ol>
-			<?php } ?>
+			<table>
+				<thead>
+				<tr>
+					<th scope="col">Plugin</th>
+					<th scope="col"><dfn title="Check to install">Install?</dfn></th>
+					<th scope="col"><dfn title="Check to activate on installation">Activate?</dfn></th>
+					<th scope="col"><dfn title="Check to force activation">Required?</dfn></th>
+				</tr>
+				</thead>
+				<tbody>
+				<?php $alt = 0; ?>
+				<?php foreach ( $pi_plugin_infos_defaults as $pi_plugin_infos_default ) { ?>
+					<tr class="<?php echo $alt ? 'alt' : ''; ?>">
+						<td><b><label for="install-<?php echo $pi_plugin_infos_default['slug']; ?>"><?php echo $pi_plugin_infos_default['name']; ?></label></b></td>
+						<td class="checkbox"><input type="checkbox" name="install[<?php echo $pi_plugin_infos_default['slug']; ?>]" id="install-<?php echo $pi_plugin_infos_default['slug']; ?>"<?php if ( ! empty( $pi_plugin_infos_default['required'] ) ) echo ' checked'; ?>></td>
+						<td class="checkbox"><input type="checkbox" name="activate[<?php echo $pi_plugin_infos_default['slug']; ?>]"<?php if ( ! empty( $pi_plugin_infos_default['is_automatic'] ) ) echo ' checked'; ?>></td>
+						<td class="checkbox"><input type="checkbox" name="required[<?php echo $pi_plugin_infos_default['slug']; ?>]"<?php if ( ! empty( $pi_plugin_infos_default['force_activation'] ) ) echo ' checked'; ?>></td>
+					</tr>
+					<?php $alt = 1 - $alt; ?>
+				<?php } ?>
+				</tbody>
+			</table>
 
 			<div class="buttons">
 				<input type="submit" value="Submit" class="button">
@@ -975,6 +1029,61 @@ if ( isset( $_POST['action'] ) ) {
 			</div>
 
 		</form>
+
+
+	<?php } else if ( $pi_step == 5 ) { ?>
+
+
+		<h2>5. Installing plugins - installation</h2>
+
+		<ol>
+			<li>Now, go to <a href="wp-admin/themes.php?page=tgmpa-install-plugins" target="_blank">the TMG Plugin Activation page</a>.</li>
+			<li>Install all the plugins listed there.</li>
+			<li>You'll get a notice asking you to activate any plugins you installed but didn't select <em>Activate</em> for on the previous screen. Dismiss that if you want.</li>
+		</ol>
+
+		<p>Now we can proceed...</p>
+
+		<p><a href="?pi-step=6" class="button">Proceed</a></p>
+
+
+	<?php } else if ( $pi_step == 6 ) { ?>
+
+
+		<h2>6. Further theme initialisation</h2>
+
+		<form action="?pi-step=6" method="post">
+
+			<h3>Standard pages</h3>
+
+			<?php if ( in_array( 'lock-pages', $pi_activated_plugins ) ) { ?>
+				<p>These pages will be locked using the Lock Pages plugin.</p>
+			<?php } ?>
+
+			<ol>
+				<?php
+				pi_form_field( 'page-events', 'Events', 'checkbox', false, '', in_array( 'simple-events', $pi_installed_plugins ) );
+				pi_form_field( 'page-about', 'About', 'checkbox', false, '', true );
+				pi_form_field( 'page-contact', 'Contact', 'checkbox', false, '', true );
+				pi_form_field( 'page-privacy', 'Privacy', 'checkbox', false, '', false );
+				pi_form_field( 'page-others', 'Other top-level pages', 'text', false, 'Enter a comma-separated list' );
+				?>
+			</ol>
+
+			<div class="buttons">
+				<input type="submit" value="Submit" class="button">
+				<input type="hidden" name="action" value="1">
+			</div>
+
+		</form>
+
+
+	<?php } else if ( $pi_step == 100 ) { ?>
+
+
+		<h2>Finished!</h2>
+
+		<p>If you've lost your password, do the lost password thing.</p>
 
 
 	<?php } ?>
@@ -1039,7 +1148,7 @@ function pi_form_field( $name, $label, $type = 'text', $required = false, $place
 		<?php } ?>
 
 		<?php if ( $auto_generate_option ) { ?>
-			<div class="checkbox"><input type="checkbox" name="<?php echo $name; ?>-generate" id="<?php echo $name; ?>-generate" value="1"<?php if ( isset( $_REQUEST['action'] ) ) { echo isset( $_POST['db-prefix-generate'] ) ? ' checked' : ''; } else if ( $auto_generate_default ) { echo ' checked'; } ?>> <label for="<?php echo $name; ?>-generate">Auto-generate</label></div>
+			<div class="checkbox"><input type="checkbox" name="<?php echo $name; ?>-generate" id="<?php echo $name; ?>-generate" value="1"<?php if ( isset( $_REQUEST['action'] ) ) { echo isset( $_POST['db-prefix-generate'] ) ? ' checked' : ''; } else if ( $auto_generate_default ) { echo ' checked'; } ?>> <label for="<?php echo $name; ?>-generate">Auto-generate <?php if ( $required ) echo ' (overrides any value entered)'; ?></label></div>
 		<?php } ?>
 
 		<?php if ( $note ) { ?>
@@ -1148,9 +1257,8 @@ function pi_recursive_replace_in_dir( $dir ) {
 	foreach ( $dir_contents as $file ) {
 		if ( ! in_array( $file, array( '.', '..' ) ) ) {
 
-			if ( is_dir( $file ) ) {
+			if ( is_dir( $dir . '/' . $file ) ) {
 
-				//echo '<pre>'; print_r( $file ); echo '</pre>'; exit;
 				pi_recursive_replace_in_dir( $dir . '/' . $file );
 
 			} else {
@@ -1308,7 +1416,8 @@ function pi_auto_generate_values() {
 		$pi_replace_key_parts = explode( '-', $pi_replace_key );
 		$pi_original_key = str_replace( '-generate', '', $pi_replace_key );
 
-		if ( end( $pi_replace_key_parts ) == 'generate' && empty( $pi_replace_values[ $pi_original_key ] ) ) {
+		// An exception for db-prefix, which is required, so the auto-generate flag should override if set
+		if ( end( $pi_replace_key_parts ) == 'generate' && ( empty( $pi_replace_values[ $pi_original_key ] ) || $pi_original_key == 'db-prefix' ) ) {
 
 			switch ( $pi_original_key ) {
 
@@ -1330,4 +1439,20 @@ function pi_auto_generate_values() {
 
 	}
 
+}
+
+
+/**
+ * Update an option in a serialized option
+ *
+ * @since	0.1
+ * @param	string	$option
+ * @param	string	$key
+ * @param	mixed	$value
+ * @return	void
+ */
+function pi_update_seralized_option( $option, $key, $value ) {
+	$pi_temp = get_option( $option );
+	$pi_temp[ $key ] = $value;
+	update_option( $option, $pi_temp );
 }
