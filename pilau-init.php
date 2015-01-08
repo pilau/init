@@ -468,6 +468,7 @@ if ( isset( $_POST['action'] ) ) {
 					'comment_status'	=> 'closed',
 					'ping_status'		=> 'closed',
 				));
+				update_option( 'page_on_front', 2 );
 
 				// Create blog page
 				$pi_new_post_id = wp_insert_post( array(
