@@ -611,7 +611,7 @@ if ( isset( $_POST['action'] ) ) {
 							// Hacky way of using WPSEO stopwords removal
 							$pi_post_name = trim( $pi_other_page_title );
 							if ( class_exists( 'WPSEO_Admin' ) ) {
-								$_POST['post_title'] = 'Fart and stuff';
+								$_POST['post_title'] = trim( $pi_other_page_title );
 								$pi_wpseo_admin = new WPSEO_Admin;
 								$pi_post_name = $pi_wpseo_admin->remove_stopwords_from_slug( null );
 							}
