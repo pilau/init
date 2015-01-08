@@ -605,24 +605,28 @@ if ( isset( $_POST['action'] ) ) {
 					// Other pages
 					if ( $pi_key_parts[1] == 'others' ) {
 
-						// Go through list
-						foreach ( explode( ',', $pi_value ) as $pi_other_page_title ) {
+						if ( trim( $pi_value ) ) {
 
-							// Hacky way of using WPSEO stopwords removal
-							$pi_post_name = trim( $pi_other_page_title );
-							if ( class_exists( 'WPSEO_Admin' ) ) {
-								$_POST['post_title'] = trim( $pi_other_page_title );
-								$pi_wpseo_admin = new WPSEO_Admin;
-								$pi_post_name = $pi_wpseo_admin->remove_stopwords_from_slug( null );
+							// Go through list
+							foreach ( explode( ',', trim( $pi_value ) ) as $pi_other_page_title ) {
+
+								// Hacky way of using WPSEO stopwords removal
+								$pi_post_name = trim( $pi_other_page_title );
+								if ( class_exists( 'WPSEO_Admin' ) ) {
+									$_POST['post_title'] = trim( $pi_other_page_title );
+									$pi_wpseo_admin = new WPSEO_Admin;
+									$pi_post_name = $pi_wpseo_admin->remove_stopwords_from_slug( null );
+								}
+
+								$pi_new_post_id = wp_insert_post( array(
+									'post_title'		=> trim( $pi_other_page_title ),
+									'post_name'			=> $pi_post_name,
+									'post_status'		=> 'publish',
+									'post_type'			=> 'page',
+								));
+								$pi_lock_pages[] = $pi_new_post_id;
 							}
 
-							$pi_new_post_id = wp_insert_post( array(
-								'post_title'		=> trim( $pi_other_page_title ),
-								'post_name'			=> $pi_post_name,
-								'post_status'		=> 'publish',
-								'post_type'			=> 'page',
-							));
-							$pi_lock_pages[] = $pi_new_post_id;
 						}
 
 					} else {
