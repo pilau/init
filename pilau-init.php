@@ -289,7 +289,6 @@ if ( isset( $_POST['action'] ) ) {
 			// Move theme
 			rename( $pi_themes_dir . '/starter-master/wp-content/themes/pilau-starter', $pi_themes_dir . '/pilau-starter' );
 			// Remove root files not needed
-			unlink( $pi_themes_dir . '/starter-master/.gitignore' );
 			unlink( $pi_themes_dir . '/starter-master/README.md' );
 			// Move the rest
 			pi_move_files( $pi_themes_dir . '/starter-master', getcwd() );
@@ -352,6 +351,11 @@ if ( isset( $_POST['action'] ) ) {
 			foreach ( array( '.htaccess', '.htpasswd', '503.php', 'robots.txt', 'wp-config.php', 'wp-config-local.php' ) as $root_file ) {
 				pi_replace_in_file( $root_file );
 			}
+
+			// Replace the theme name in .gitignore
+			$pi_gitignore = file_get_contents( '.gitignore' );
+			$pi_gitignore = str_replace( 'pilau-starter', $pi_replace_values['theme-slug'], $pi_gitignore );
+			file_put_contents( '.gitignore', $pi_gitignore );
 
 			// Go through theme files
 			pi_recursive_replace_in_dir( $pi_starter_theme_dir );
@@ -827,7 +831,7 @@ if ( isset( $_POST['action'] ) ) {
 <?php if ( ! $pi_wp_present || ! is_writable( 'wp-config-sample.php' ) || ! is_writable( 'wp-content' ) ) { ?>
 
 
-	<p class="alert">First thing, please make sure a fresh copy of <a href="https://wordpress.org/download/">the latest WordPress</a> is present in this directory, and that you've got an empty MySQL database ready.</p>
+	<p class="alert">OK! First thing, make sure a fresh copy of <a href="https://wordpress.org/download/">the latest WordPress</a> is present in this directory, and that you've got an empty MySQL database ready.</p>
 
 	<?php if ( ! is_writable( 'wp-config-sample.php' ) || ! is_writable( 'wp-content' ) ) { ?>
 		<p>Also, the file <code>wp-config-sample.php</code> and the directory <code>wp-content</code> need to be writeable by the web server's user.</p>
