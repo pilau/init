@@ -14,8 +14,8 @@ global $pi_replace_values;
 * Initialise
 ========================================================================================*/
 
-
 // Basics
+$pi_root_dir = dirname( getcwd() );
 $pi_themes_dir = getcwd() . '/wp-content/themes';
 $pi_replace_values = array();
 
@@ -285,9 +285,9 @@ if ( isset( $_POST['action'] ) ) {
 			// Download and install Pilau Starter theme
 			$pi_ps_theme_zip = $pi_themes_dir . '/pilau-starter.zip';
 			pi_download_file( 'https://github.com/pilau/starter/archive/master.zip', $pi_ps_theme_zip );
-			pi_unzip_archive( $pi_ps_theme_zip, $pi_themes_dir, true );
+			pi_unzip_archive( $pi_ps_theme_zip, $pi_root_dir );
 			// Move theme
-			rename( $pi_themes_dir . '/starter-master/wp-content/themes/pilau-starter', $pi_themes_dir . '/pilau-starter' );
+			rename( $pi_root_dir . '/starter-master/wp-content/themes/pilau-starter', $pi_themes_dir . '/pilau-starter' );
 			// Remove root files not needed
 			unlink( $pi_themes_dir . '/starter-master/README.md' );
 			// Move the rest
