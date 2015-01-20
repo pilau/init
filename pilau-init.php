@@ -375,7 +375,7 @@ if ( isset( $_POST['action'] ) ) {
 
 			// Replace constants in functions.php
 			$pi_contents = file_get_contents( $pi_starter_theme_dir . '/functions.php' );
-			foreach ( array( 'use-comments', 'use-categories', 'use-tags', 'ignore-updates-for-inactive-plugins', 'use-cookie-notice', 'use-picturefill', 'rename-posts-news' ) as $pi_constant ) {
+			foreach ( array( 'use-comments', 'use-categories', 'use-tags', 'ignore-updates-for-inactive-plugins', 'use-cookie-notice', 'rename-posts-news' ) as $pi_constant ) {
 				$pi_constant_parts = explode( '-', $pi_constant );
 				$pi_constant_name = 'PILAU_' . strtoupper( implode( '_', $pi_constant_parts ) );
 				$pi_contents = preg_replace( "/define\( " . $pi_constant_name . ", [a-z]+ \);/", "define\( " . $pi_constant_name . ", " . isset( $pi_replace_values[ 'theme-' . $pi_constant ] ) ? 'true' : 'false' . " );", $pi_contents );
@@ -925,7 +925,6 @@ if ( isset( $_POST['action'] ) ) {
 				pi_form_field( 'theme-use-tags', 'Use tags?', 'checkbox', false, '', true );
 				pi_form_field( 'theme-ignore-updates-for-inactive-plugins', 'Ignore updates for inactive plugins?', 'checkbox', false, '', true );
 				pi_form_field( 'theme-use-cookie-notice', 'Use cookie notice?', 'checkbox', false, '', true );
-				pi_form_field( 'theme-use-picturefill', 'Use Picturefill?', 'checkbox', false, '', false );
 				pi_form_field( 'theme-twitter-screen-name', 'Twitter screen name', 'text', false );
 				pi_form_field( 'theme-rename-posts-news', 'Rename Posts to News?', 'checkbox', false, '', true );
 				?>
@@ -1200,14 +1199,29 @@ function pi_replace_values( $string ) {
 
 	// Do replacements
 	foreach ( $pi_replace_values as $replace_key => $replace_value ) {
-		$replace_key_prefix = '[[';
-		$replace_key_suffix = ']]';
-		if ( substr( $replace_key, 0, 2 ) == '//' ) {
+
+		// Set the search string
+		$replace_needle = $replace_key;
+		// First, placeholders which are just strings, no brackets
+		if ( $replace_key == 'theme-phpdoc-name' ) {
+			$replace_needle = 'Pilau_Starter';
+		} else if ( $replace_key == 'site-title' ) {
+			$replace_needle = 'Pilau Starter';
+		} else if ( $replace_key == 'theme-slug' ) {
+			$replace_needle = 'pilau-starter';
+		} else if ( $replace_key == 'theme-author' ) {
+			$replace_needle = 'Steve Taylor';
+		} else if ( substr( $replace_key, 0, 2 ) == '//' ) {
 			// These will be blocks in PHP
-			$replace_key = ltrim( $replace_key, '/' );
-			$replace_key_prefix = '//' . $replace_key_prefix;
+			$replace_needle = '//[[' . ltrim( $replace_needle, '/' ) . ']]';
+		} else {
+			// Default bracketed placeholders
+			$replace_needle = '[[' . $replace_needle . ']]';
 		}
-		$string = str_replace( $replace_key_prefix . $replace_key . $replace_key_suffix, $replace_value, $string );
+
+		// Do replace
+		$string = str_replace( $replace_needle, $replace_value, $string );
+
 	}
 
 	return $string;
