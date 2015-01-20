@@ -833,13 +833,19 @@ if ( isset( $_POST['action'] ) ) {
 
 
 <?php /* Do basic file checks */ ?>
-<?php if ( ! $pi_wp_present || ! is_writable( 'wp-config-sample.php' ) || ! is_writable( 'wp-content' ) ) { ?>
+<?php if ( ! $pi_wp_present || ! is_writable( 'wp-config-sample.php' ) || ! is_writable( 'wp-content' ) || basename( getcwd() ) != 'public' || ! is_writable( getcwd() ) || ! is_writable( $pi_root_dir ) ) { ?>
 
 
-	<p class="alert">OK! First thing, make sure a fresh copy of <a href="https://wordpress.org/download/">the latest WordPress</a> is present in this directory, and that you've got an empty MySQL database ready.</p>
+	<?php if ( ! $pi_wp_present ) { ?>
+		<p class="alert">OK! First thing, make sure a fresh copy of <a href="https://wordpress.org/download/">the latest WordPress</a> is present in this directory, and that you've got an empty MySQL database ready.</p>
+	<?php } ?>
 
 	<?php if ( ! is_writable( 'wp-config-sample.php' ) || ! is_writable( 'wp-content' ) ) { ?>
 		<p>Also, the file <code>wp-config-sample.php</code> and the directory <code>wp-content</code> need to be writeable by the web server's user.</p>
+	<?php } ?>
+
+	<?php if ( basename( getcwd() ) != 'public' || ! is_writable( getcwd() ) || ! is_writable( $pi_root_dir ) ) { ?>
+		<p>And another thing! This file should be in a directory named <code>public</code>, inside the project root directory - and both should be writeable.</p>
 	<?php } ?>
 
 	<p>Refresh this page when ready...</p>
