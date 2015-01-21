@@ -16,7 +16,8 @@ global $pi_replace_values;
 
 // Basics
 $pi_root_dir = dirname( getcwd() );
-$pi_themes_dir = getcwd() . '/wp-content/themes';
+$pi_themes_dir_public = getcwd() . '/wp-content/themes';
+$pi_themes_dir_src = $pi_root_dir . '/src/wp-content/themes';
 $pi_replace_values = array();
 
 // Check for stash file - indicates incomplete process
@@ -276,26 +277,24 @@ if ( isset( $_POST['action'] ) ) {
 		// Installing Pilau
 		case 1: {
 
-			// Download and install Pilau Base theme
-			$pi_pb_theme_zip = $pi_themes_dir . 'pilau-base.zip';
+			// Download and install Pilau Base theme in /public
+			$pi_pb_theme_zip = $pi_themes_dir_public . 'pilau-base.zip';
 			pi_download_file( 'https://github.com/pilau/base/archive/master.zip', $pi_pb_theme_zip );
-			pi_unzip_archive( $pi_pb_theme_zip, $pi_themes_dir );
-			rename( $pi_themes_dir . '/base-master', $pi_themes_dir . '/pilau-base' );
+			pi_unzip_archive( $pi_pb_theme_zip, $pi_themes_dir_public );
+			rename( $pi_themes_dir_public . '/base-master', $pi_themes_dir_public . '/pilau-base' );
 
-			// Download and install Pilau Starter theme
-			$pi_ps_theme_zip = $pi_themes_dir . '/pilau-starter.zip';
+			// Download and install Pilau Starter package
+			$pi_ps_theme_zip = $pi_root_dir . '/pilau-starter.zip';
 			pi_download_file( 'https://github.com/pilau/starter/archive/master.zip', $pi_ps_theme_zip );
 			pi_unzip_archive( $pi_ps_theme_zip, $pi_root_dir );
-			// Move theme
-			rename( $pi_root_dir . '/starter-master/wp-content/themes/pilau-starter', $pi_themes_dir . '/pilau-starter' );
+			// Move src
+			rename( $pi_root_dir . '/starter-master/src', $pi_root_dir . '/src' );
 			// Remove root files not needed
-			unlink( $pi_themes_dir . '/starter-master/README.md' );
+			unlink( $pi_root_dir . '/starter-master/README.md' );
 			// Move the rest
-			pi_move_files( $pi_themes_dir . '/starter-master', getcwd() );
-			// Delete the dirs
-			rmdir( $pi_themes_dir . '/starter-master/wp-content/themes' );
-			rmdir( $pi_themes_dir . '/starter-master/wp-content' );
-			rmdir( $pi_themes_dir . '/starter-master' );
+			pi_move_files( $pi_root_dir . '/starter-master', $pi_root_dir );
+			// Delete the dir
+			rmdir( $pi_root_dir . '/starter-master' );
 
 			// Get wp-config-local.php gist
 			$pi_local_config = file_get_contents( 'https://gist.githubusercontent.com/gyrus/3131308/raw/local-config.php' );
@@ -326,8 +325,10 @@ if ( isset( $_POST['action'] ) ) {
 
 			// Theme slug
 			$pi_replace_values['theme-slug'] = strtolower( preg_replace( '/[^A-Za-z\-]/', '', str_replace( ' ', '-', $pi_replace_values['site-title'] ) ) );
-			$pi_starter_theme_dir = $pi_themes_dir . '/' . $pi_replace_values['theme-slug'];
-			rename( $pi_themes_dir . '/pilau-starter', $pi_starter_theme_dir );
+
+			// Do theme stuff for theme in src
+			$pi_starter_theme_dir_src = $pi_themes_dir_src . '/' . $pi_replace_values['theme-slug'];
+			rename( $pi_themes_dir_src . '/pilau-starter', $pi_starter_theme_dir_src );
 
 			// Add in escaped values where necessary
 			foreach ( array( 'holding-page-ip', 'production-domain-to-be-redirected' ) as $pi_replace_value ) {
@@ -348,20 +349,33 @@ if ( isset( $_POST['action'] ) ) {
 			//echo '<pre>'; print_r( $pi_replace_values ); echo '</pre>'; exit;
 
 			// Do replacements in relevant root files
-			foreach ( array( '.htaccess', '.htpasswd', '503.php', 'robots.txt', 'wp-config.php', 'wp-config-local.php' ) as $root_file ) {
-				pi_replace_in_file( $root_file );
+			foreach ( array( 'wp-config-local.php' ) as $pi_root_file_public ) {
+				pi_replace_in_file( $pi_root_dir . '/src/' . $pi_root_file_public );
+			}
+			foreach ( array( '.htaccess', '.htpasswd', '503.php', 'robots.txt', 'wp-config.php' ) as $pi_root_file_src ) {
+				pi_replace_in_file( $pi_root_dir . '/src/' . $pi_root_file_src );
 			}
 
-			// Replace the theme name in .gitignore
-			$pi_gitignore = file_get_contents( '.gitignore' );
-			$pi_gitignore = str_replace( 'pilau-starter', $pi_replace_values['theme-slug'], $pi_gitignore );
-			file_put_contents( '.gitignore', $pi_gitignore );
+			// .gitignore replacements - get file lines as array
+			$pi_gitignore_lines = file( $pi_root_dir . '/.gitignore', FILE_IGNORE_NEW_LINES );
+			foreach ( $pi_gitignore_lines as &$pi_gitignore_line ) {
+				$pi_gitignore_line = str_replace( 'pilau-starter', $pi_replace_values['theme-slug'], $pi_gitignore_line );
+				if ( $pi_gitignore_line == '/public/' ) {
+					$pi_gitignore_line = '#/public/';
+				} else if ( strlen( $pi_gitignore_line ) > 9 && ( substr( $pi_gitignore_line, 0, 9 ) == '#/public/' || substr( $pi_gitignore_line, 0, 10 ) == '#!/public/' ) ) {
+					$pi_gitignore_line = str_replace( '#', '', $pi_gitignore_line );
+				}
+			}
+			file_put_contents( $pi_root_dir . '/.gitignore', implode( PHP_EOL, $pi_gitignore_lines ) );
+
+			// package.json
+			pi_replace_in_file( $pi_root_dir . '/package.json' );
 
 			// Go through theme files
-			pi_recursive_replace_in_dir( $pi_starter_theme_dir );
+			pi_recursive_replace_in_dir( $pi_starter_theme_dir_src );
 
 			// .htaccess
-			$pi_contents = file_get_contents( getcwd() . '/.htaccess' );
+			$pi_contents = file_get_contents( $pi_root_dir . '/src/.htaccess' );
 			if ( ! empty( $pi_replace_values['staging-domain'] ) && ! empty( $pi_replace_values['staging-path'] ) ) {
 				$pi_contents = pi_uncomment_htaccess( $pi_contents, 'staging-password' );
 			}
@@ -371,21 +385,23 @@ if ( isset( $_POST['action'] ) ) {
 			if ( ! empty( $pi_replace_values['production-domain-to-be-redirected-escaped'] ) && ! empty ( $pi_replace_values['production-domain'] ) ) {
 				$pi_contents = pi_uncomment_htaccess( $pi_contents, 'force-www' );
 			}
-			file_put_contents( getcwd() . '/.htaccess', $pi_contents );
+			file_put_contents( $pi_root_dir . '/src/.htaccess', $pi_contents );
 
 			// Replace constants in functions.php
-			$pi_contents = file_get_contents( $pi_starter_theme_dir . '/functions.php' );
+			$pi_contents = file_get_contents( $pi_starter_theme_dir_src . '/functions.php' );
 			foreach ( array( 'use-comments', 'use-categories', 'use-tags', 'ignore-updates-for-inactive-plugins', 'use-cookie-notice', 'rename-posts-news' ) as $pi_constant ) {
 				$pi_constant_parts = explode( '-', $pi_constant );
 				$pi_constant_name = 'PILAU_' . strtoupper( implode( '_', $pi_constant_parts ) );
 				$pi_contents = preg_replace( "/define\( " . $pi_constant_name . ", [a-z]+ \);/", "define\( " . $pi_constant_name . ", " . isset( $pi_replace_values[ 'theme-' . $pi_constant ] ) ? 'true' : 'false' . " );", $pi_contents );
 			}
 			foreach ( array( 'twitter-screen-name' ) as $pi_constant ) {
-				$pi_constant_parts = explode( '-', $pi_constant );
-				$pi_constant_name = 'PILAU_' . strtoupper( implode( '_', $pi_constant_parts ) );
-				$pi_contents = preg_replace( "/define\( " . $pi_constant_name . ", '[^']*' \);/", "define\( " . $pi_constant_name . ", '" . $pi_replace_values[ 'theme-' . $pi_constant ] . "' );", $pi_contents );
+				if ( ! empty( $pi_replace_values[ 'theme-' . $pi_constant ] ) ) {
+					$pi_constant_parts = explode( '-', $pi_constant );
+					$pi_constant_name = 'PILAU_' . strtoupper( implode( '_', $pi_constant_parts ) );
+					$pi_contents = preg_replace( "/define\( " . $pi_constant_name . ", '[^']*' \);/", "define\( " . $pi_constant_name . ", '" . $pi_replace_values[ 'theme-' . $pi_constant ] . "' );", $pi_contents );
+				}
 			}
-			file_put_contents( $pi_starter_theme_dir . '/functions.php', $pi_contents );
+			file_put_contents( $pi_starter_theme_dir_src . '/functions.php', $pi_contents );
 
 			// Stash
 			$pi_stash = array(
@@ -597,6 +613,13 @@ if ( isset( $_POST['action'] ) ) {
 				$pi_lock_pages[] = $pi_pages_for_posts;
 			}
 
+			// Keep track of particular pages for menus
+			$pi_page_ids = array(
+				'contact'	=> null,
+				'about'		=> null,
+				'privacy'	=> null,
+			);
+
 			// Go through all submitted values
 			foreach ( $_POST as $pi_key => $pi_value ) {
 				$pi_key_parts = explode( '-', $pi_key );
@@ -640,7 +663,46 @@ if ( isset( $_POST['action'] ) ) {
 							'post_type'		=> 'page',
 						));
 						$pi_lock_pages[] = $pi_new_post_id;
+						if ( in_array( $pi_key_parts[1], array_keys( $pi_page_ids ) ) ) {
+							$pi_page_ids[ $pi_key_parts[1] ] = $pi_new_post_id;
+						}
 
+					}
+
+				} else if ( $pi_key_parts[0] == 'menu' ) {
+
+					// Set up the appropriate menu
+					$pi_file_contents = file_get_contents( $pi_starter_theme_dir_public . '/inc/setup.php' );
+					$pi_file_contents = str_replace( "//'nav_" . $pi_key_parts[1] . "' => __( '" . ucfirst( $pi_key_parts[1] ) . " navigation' ),", "'nav_" . $pi_key_parts[1] . "' => __( '" . ucfirst( $pi_key_parts[1] ) . " navigation' ),", $pi_file_contents );
+					file_put_contents( $pi_starter_theme_dir_public . '/inc/setup.php', $pi_file_contents );
+					$pi_menu_id = wp_create_nav_menu( ucfirst( $pi_key_parts[1] ) . ' navigation' );
+
+					// Add menu items
+					switch ( $pi_key_parts[1] ) {
+						case 'header': {
+							if ( $pi_replace_values['wp-show_on_front'] == 'post' ) {
+								wp_update_nav_menu_item( $pi_menu_id, 0, array(
+										'menu-item-title'		=> $pi_replace_values['theme-rename-posts-news'] ? 'News' : 'Blog',
+										'menu-item-url'			=> site_url(),
+										'menu-item-status'		=> 'publish'
+									)
+								);
+							}
+							break;
+						}
+						case 'footer': {
+							foreach ( $pi_page_ids as $pi_slug => $pi_id ) {
+								if ( $pi_id ) {
+									wp_update_nav_menu_item( $pi_menu_id, 0, array(
+											'menu-item-title'		=> ucfirst( $pi_slug ),
+											'menu-item-url'			=> site_url( '/' . $pi_slug . '/' ),
+											'menu-item-status'		=> 'publish'
+										)
+									);
+								}
+							}
+							break;
+						}
 					}
 
 				}
@@ -656,6 +718,8 @@ if ( isset( $_POST['action'] ) ) {
 
 			/*
 			 * BY THIS POINT:
+			 * - Pages installed
+			 * - Menus initialised
 			 * - All done!
 			 */
 
@@ -931,8 +995,8 @@ if ( isset( $_POST['action'] ) ) {
 				pi_form_field( 'theme-use-tags', 'Use tags?', 'checkbox', false, '', true );
 				pi_form_field( 'theme-ignore-updates-for-inactive-plugins', 'Ignore updates for inactive plugins?', 'checkbox', false, '', true );
 				pi_form_field( 'theme-use-cookie-notice', 'Use cookie notice?', 'checkbox', false, '', true );
-				pi_form_field( 'theme-twitter-screen-name', 'Twitter screen name', 'text', false );
 				pi_form_field( 'theme-rename-posts-news', 'Rename Posts to News?', 'checkbox', false, '', true );
+				pi_form_field( 'theme-twitter-screen-name', 'Twitter screen name', 'text', false );
 				?>
 			</ol>
 
@@ -1081,6 +1145,15 @@ if ( isset( $_POST['action'] ) ) {
 				pi_form_field( 'page-contact', 'Contact', 'checkbox', false, '', true );
 				pi_form_field( 'page-privacy', 'Privacy', 'checkbox', false, '', false );
 				pi_form_field( 'page-others', 'Other top-level pages', 'text', false, 'Enter a comma-separated list' );
+				?>
+			</ol>
+
+			<h3>Menus</h3>
+
+			<ol>
+				<?php
+				pi_form_field( 'menu-header', 'Header nav?', 'checkbox', false, '', true );
+				pi_form_field( 'menu-footer', 'Footer nav?', 'checkbox', false, '', true );
 				?>
 			</ol>
 
