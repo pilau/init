@@ -1,7 +1,7 @@
 <?php
 
 /**
- * Pilau init
+ * Pilau Init
  *
  * For initialising a Pilau-flavoured WordPress installation
  *
@@ -18,6 +18,7 @@ global $pi_replace_values;
 $pi_root_dir = dirname( getcwd() );
 $pi_themes_dir_public = getcwd() . '/wp-content/themes';
 $pi_themes_dir_src = $pi_root_dir . '/src/wp-content/themes';
+$pi_root_files = array( '.htaccess', '.htpasswd', '503.php', 'robots.txt', 'wp-config.php' );
 $pi_replace_values = array();
 
 // Check for stash file - indicates incomplete process
@@ -327,8 +328,7 @@ if ( isset( $_POST['action'] ) ) {
 			$pi_replace_values['theme-slug'] = strtolower( preg_replace( '/[^A-Za-z\-]/', '', str_replace( ' ', '-', $pi_replace_values['site-title'] ) ) );
 
 			// Do theme stuff for theme in src
-			$pi_starter_theme_dir_src = $pi_themes_dir_src . '/' . $pi_replace_values['theme-slug'];
-			rename( $pi_themes_dir_src . '/pilau-starter', $pi_starter_theme_dir_src );
+			rename( $pi_themes_dir_src . '/pilau-starter', $pi_themes_dir_src . '/' . $pi_replace_values['theme-slug'] );
 
 			// Add in escaped values where necessary
 			foreach ( array( 'holding-page-ip', 'production-domain-to-be-redirected' ) as $pi_replace_value ) {
@@ -348,12 +348,12 @@ if ( isset( $_POST['action'] ) ) {
 
 			//echo '<pre>'; print_r( $pi_replace_values ); echo '</pre>'; exit;
 
-			// Do replacements in relevant root files
+			// Do replacements in relevant root files, and copy to public where necessary
 			foreach ( array( 'wp-config-local.php' ) as $pi_root_file_public ) {
-				pi_replace_in_file( $pi_root_dir . '/src/' . $pi_root_file_public );
+				pi_replace_in_file( $pi_root_dir . '/public/' . $pi_root_file_public );
 			}
-			foreach ( array( '.htaccess', '.htpasswd', '503.php', 'robots.txt', 'wp-config.php' ) as $pi_root_file_src ) {
-				pi_replace_in_file( $pi_root_dir . '/src/' . $pi_root_file_src );
+			foreach ( $pi_root_files as $pi_root_file ) {
+				pi_replace_in_file( $pi_root_dir . '/src/' . $pi_root_file );
 			}
 
 			// .gitignore replacements - get file lines as array
@@ -372,7 +372,7 @@ if ( isset( $_POST['action'] ) ) {
 			pi_replace_in_file( $pi_root_dir . '/package.json' );
 
 			// Go through theme files
-			pi_recursive_replace_in_dir( $pi_starter_theme_dir_src );
+			pi_recursive_replace_in_dir( $pi_themes_dir_src . '/' . $pi_replace_values['theme-slug'] );
 
 			// .htaccess
 			$pi_contents = file_get_contents( $pi_root_dir . '/src/.htaccess' );
@@ -388,7 +388,7 @@ if ( isset( $_POST['action'] ) ) {
 			file_put_contents( $pi_root_dir . '/src/.htaccess', $pi_contents );
 
 			// Replace constants in functions.php
-			$pi_contents = file_get_contents( $pi_starter_theme_dir_src . '/functions.php' );
+			$pi_contents = file_get_contents( $pi_themes_dir_src . '/' . $pi_replace_values['theme-slug'] . '/functions.php' );
 			foreach ( array( 'use-comments', 'use-categories', 'use-tags', 'ignore-updates-for-inactive-plugins', 'use-cookie-notice', 'rename-posts-news' ) as $pi_constant ) {
 				$pi_constant_parts = explode( '-', $pi_constant );
 				$pi_constant_name = 'PILAU_' . strtoupper( implode( '_', $pi_constant_parts ) );
@@ -401,7 +401,7 @@ if ( isset( $_POST['action'] ) ) {
 					$pi_contents = preg_replace( "/define\( " . $pi_constant_name . ", '[^']*' \);/", "define\( " . $pi_constant_name . ", '" . $pi_replace_values[ 'theme-' . $pi_constant ] . "' );", $pi_contents );
 				}
 			}
-			file_put_contents( $pi_starter_theme_dir_src . '/functions.php', $pi_contents );
+			file_put_contents( $pi_themes_dir_src . '/' . $pi_replace_values['theme-slug'] . '/functions.php', $pi_contents );
 
 			// Stash
 			$pi_stash = array(
@@ -672,21 +672,24 @@ if ( isset( $_POST['action'] ) ) {
 				} else if ( $pi_key_parts[0] == 'menu' ) {
 
 					// Set up the appropriate menu
-					$pi_file_contents = file_get_contents( $pi_starter_theme_dir_public . '/inc/setup.php' );
+					$pi_file_contents = file_get_contents( $pi_themes_dir_public . '/' . $pi_replace_values['theme-slug'] . '/inc/setup.php' );
 					$pi_file_contents = str_replace( "//'nav_" . $pi_key_parts[1] . "' => __( '" . ucfirst( $pi_key_parts[1] ) . " navigation' ),", "'nav_" . $pi_key_parts[1] . "' => __( '" . ucfirst( $pi_key_parts[1] ) . " navigation' ),", $pi_file_contents );
-					file_put_contents( $pi_starter_theme_dir_public . '/inc/setup.php', $pi_file_contents );
+					file_put_contents( $pi_themes_dir_public . '/' . $pi_replace_values['theme-slug'] . '/inc/setup.php', $pi_file_contents );
 					$pi_menu_id = wp_create_nav_menu( ucfirst( $pi_key_parts[1] ) . ' navigation' );
 
 					// Add menu items
 					switch ( $pi_key_parts[1] ) {
 						case 'header': {
-							if ( $pi_replace_values['wp-show_on_front'] == 'post' ) {
+							if ( $pi_replace_values['wp-show_on_front'] == 'page' ) {
+								// If the front is a page, add link to the news/blog index
 								wp_update_nav_menu_item( $pi_menu_id, 0, array(
 										'menu-item-title'		=> $pi_replace_values['theme-rename-posts-news'] ? 'News' : 'Blog',
-										'menu-item-url'			=> site_url(),
+										'menu-item-url'			=> home_url( '/' . $pi_replace_values['theme-rename-posts-news'] ? 'news' : 'blog' . '/' ),
 										'menu-item-status'		=> 'publish'
 									)
 								);
+							} else {
+
 							}
 							break;
 						}
@@ -748,7 +751,7 @@ if ( isset( $_POST['action'] ) ) {
 <html lang="en">
 <head>
 	<meta charset="utf-8">
-	<title>Pilau init</title>
+	<title>Pilau Init</title>
 	<link href='http://fonts.googleapis.com/css?family=Open+Sans:400italic,400,700' rel='stylesheet' type='text/css'>
 	<style>
 		* {
@@ -772,6 +775,13 @@ if ( isset( $_POST['action'] ) ) {
 		}
 		a:hover, a:focus {
 			color: #2ea2cc;
+		}
+		code {
+			display: inline-block;
+			padding: .1em .5em;
+			border-radius: .3em;
+			background-color: #333;
+			color: #eee;
 		}
 		form ol {
 			list-style: none;
@@ -1012,6 +1022,16 @@ if ( isset( $_POST['action'] ) ) {
 
 
 		<h1>2. Installing WordPress</h1>
+
+		<p>Before going any further, you need to initialise things with npm and Grunt:</p>
+
+		<ol>
+			<li>First, make sure directory and file permissions are set so that the Apache user can write to <code>/.htaccess</code>, <code>/package.json</code>, <code>/public/</code> and <code>/src/</code></li>
+			<li>In the project root, <code>npm install</code> or <code>sudo npm install</code></li>
+			<li>Then, <code>grunt init</code></li>
+		</ol>
+
+		<p>Now...</p>
 
 		<form action="?pi-step=2" method="post">
 
