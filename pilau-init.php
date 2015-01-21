@@ -379,9 +379,6 @@ if ( isset( $_POST['action'] ) ) {
 			if ( ! empty( $pi_replace_values['staging-domain'] ) && ! empty( $pi_replace_values['staging-path'] ) ) {
 				$pi_contents = pi_uncomment_htaccess( $pi_contents, 'staging-password' );
 			}
-			if ( ! empty( $pi_replace_values['holding-page-ip-escaped'] ) ) {
-				$pi_contents = pi_uncomment_htaccess( $pi_contents, 'holding-page' );
-			}
 			if ( ! empty( $pi_replace_values['production-domain-to-be-redirected-escaped'] ) && ! empty ( $pi_replace_values['production-domain'] ) ) {
 				$pi_contents = pi_uncomment_htaccess( $pi_contents, 'force-www' );
 			}
