@@ -386,7 +386,7 @@ if ( isset( $_POST['action'] ) ) {
 
 			// Replace constants in functions.php
 			$pi_contents = file_get_contents( $pi_themes_dir_src . '/' . $pi_replace_values['theme-slug'] . '/functions.php' );
-			foreach ( array( 'use-comments', 'use-categories', 'use-tags', 'ignore-updates-for-inactive-plugins', 'use-cookie-notice', 'rename-posts-news' ) as $pi_constant ) {
+			foreach ( array( 'use-comments', 'use-categories', 'hide-categories', 'use-tags', 'hide-tags', 'ignore-updates-for-inactive-plugins', 'use-cookie-notice', 'rename-posts-news' ) as $pi_constant ) {
 				$pi_constant_parts = explode( '-', $pi_constant );
 				$pi_constant_name = 'PILAU_' . strtoupper( implode( '_', $pi_constant_parts ) );
 				$pi_contents = preg_replace( "/define\( " . $pi_constant_name . ", [a-z]+ \);/", "define\( " . $pi_constant_name . ", " . isset( $pi_replace_values[ 'theme-' . $pi_constant ] ) ? 'true' : 'false' . " );", $pi_contents );
@@ -999,7 +999,9 @@ if ( isset( $_POST['action'] ) ) {
 				<?php
 				pi_form_field( 'theme-use-comments', 'Use comments?', 'checkbox', false, '', false );
 				pi_form_field( 'theme-use-categories', 'Use categories?', 'checkbox', false, '', false );
-				pi_form_field( 'theme-use-tags', 'Use tags?', 'checkbox', false, '', true );
+				pi_form_field( 'theme-hide-categories', 'Hide categories?', 'checkbox', false, '', true );
+				pi_form_field( 'theme-use-tags', 'Use tags?', 'checkbox', false, '', false );
+				pi_form_field( 'theme-hide-tags', 'Hide tags?', 'checkbox', false, '', true );
 				pi_form_field( 'theme-ignore-updates-for-inactive-plugins', 'Ignore updates for inactive plugins?', 'checkbox', false, '', true );
 				pi_form_field( 'theme-use-cookie-notice', 'Use cookie notice?', 'checkbox', false, '', true );
 				pi_form_field( 'theme-rename-posts-news', 'Rename Posts to News?', 'checkbox', false, '', true );
