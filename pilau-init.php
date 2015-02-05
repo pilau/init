@@ -85,6 +85,7 @@ $pi_plugin_infos_defaults = array(
 		'is_automatic'		=> true,
 		'force_activation'	=> false,
 		'external_url'      => 'http://www.gravityforms.com/',
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'GitHub Updater',
@@ -94,6 +95,7 @@ $pi_plugin_infos_defaults = array(
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
 		'external_url'      => 'https://github.com/afragen/github-updater',
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Developer\'s Custom Fields',
@@ -101,6 +103,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
+		'local_dev'			=> true,
 	),
 	array(
 		'name'				=> 'Lock Pages',
@@ -108,6 +111,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
+		'local_dev'			=> true,
 	),
 	array(
 		'name'				=> 'Better WordPress Minify',
@@ -115,6 +119,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'WP Super Cache',
@@ -122,6 +127,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Members',
@@ -129,6 +135,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Simple Page Ordering',
@@ -136,6 +143,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Use Google Libraries',
@@ -143,6 +151,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'WordPress SEO',
@@ -150,6 +159,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'BackUpWordPress',
@@ -157,6 +167,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Simple Events',
@@ -164,6 +175,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
+		'local_dev'			=> true,
 	),
 	array(
 		'name'				=> 'Dynamic Widgets',
@@ -171,6 +183,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Google Analytics for WordPress',
@@ -178,6 +191,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Pilau Google Analytics Measurement Protocol',
@@ -187,6 +201,7 @@ $pi_plugin_infos_defaults = array(
 		'force_activation'	=> false,
 		'external_url'		=> 'https://github.com/pilau/ga-measurement-protocol',
 		'is_automatic'		=> false,
+		'local_dev'			=> true,
 	),
 	array(
 		'name'				=> 'Pilau Slideshow',
@@ -196,6 +211,7 @@ $pi_plugin_infos_defaults = array(
 		'force_activation'	=> false,
 		'external_url'		=> 'https://github.com/pilau/slideshow',
 		'is_automatic'		=> true,
+		'local_dev'			=> true,
 	),
 	array(
 		'name'				=> 'User Photo',
@@ -203,6 +219,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Codepress Admin Columns',
@@ -210,6 +227,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'InfiniteWP Client',
@@ -217,6 +235,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'MailChimp for WordPress',
@@ -224,6 +243,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'oAuth Twitter Feed for Developers',
@@ -231,6 +251,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Wordfence',
@@ -238,6 +259,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'User Switching',
@@ -245,6 +267,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Advanced Custom Fields',
@@ -252,6 +275,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 );
 // Sort it out!
