@@ -73,6 +73,9 @@ if ( $pi_step > 3 ) {
  * Default plugin infos for TMG
  * @link	http://tgmpluginactivation.com/
  *
+ * The local_dev flag indicates whether or not the plugin might be developed by
+ * the site developer, to have the option of a symlink to it
+ *
  * @since	0.1
  * @var		array
  */
@@ -302,11 +305,27 @@ if ( isset( $_POST['action'] ) ) {
 		// Installing Pilau
 		case 1: {
 
-			// Download and install Pilau Base theme in /public
-			$pi_pb_theme_zip = $pi_themes_dir_public . 'pilau-base.zip';
-			pi_download_file( 'https://github.com/pilau/base/archive/master.zip', $pi_pb_theme_zip );
-			pi_unzip_archive( $pi_pb_theme_zip, $pi_themes_dir_public );
-			rename( $pi_themes_dir_public . '/base-master', $pi_themes_dir_public . '/pilau-base' );
+			// Verify local dev path
+			if ( ! empty( $pi_replace_values['local-path-to-dev-plugins'] ) && file_exists( $pi_replace_values['local-path-to-dev-plugins'] ) ) {
+				$pi_replace_values['local-dev-path-valid'] = true;
+				$pi_replace_values['local-path-to-dev-plugins'] = rtrim( $pi_replace_values['local-path-to-dev-plugins'], '/\\' ) . '/';
+			}
+
+			// Download Pilau Base or symlink?
+			if ( $pi_replace_values['local-dev-path-valid'] && $pi_replace_values['symlink-pilau-base'] && file_exists( $pi_replace_values['local-path-to-dev-plugins'] . 'pilau-base/' ) ) {
+
+				// Create symlink
+				symlink( $pi_replace_values['local-path-to-dev-plugins'] . 'pilau-base/', $pi_themes_dir_public . '/pilau-base' );
+
+			} else {
+
+				// Download and install Pilau Base theme in /public
+				$pi_pb_theme_zip = $pi_themes_dir_public . 'pilau-base.zip';
+				pi_download_file( 'https://github.com/pilau/base/archive/master.zip', $pi_pb_theme_zip );
+				pi_unzip_archive( $pi_pb_theme_zip, $pi_themes_dir_public );
+				rename( $pi_themes_dir_public . '/base-master', $pi_themes_dir_public . '/pilau-base' );
+
+			}
 
 			// Download and install Pilau Starter package
 			$pi_ps_theme_zip = $pi_root_dir . '/pilau-starter.zip';
@@ -594,15 +613,25 @@ if ( isset( $_POST['action'] ) ) {
 			$pi_plugin_infos = array();
 			foreach ( $pi_plugin_infos_defaults as $pi_plugin_infos_default ) {
 
-				// Add to TGM list if set to install
-				if ( in_array( $pi_plugin_infos_default['slug'], array_keys( $_POST['install'] ) ) ) {
+				// Symlink?
+				if ( $pi_plugin_infos_default['local_dev'] && in_array( $pi_plugin_infos_default['slug'], array_keys( $_POST['symlink'] ) ) && file_exists(  $pi_replace_values['local-path-to-dev-plugins'] ) . $pi_plugin_infos_default['slug'] . '/' ) {
 
-					// Update defaults according to input
-					$pi_plugin_infos_default['force_activation'] = $pi_plugin_infos_default['required'] = in_array( $pi_plugin_infos_default['slug'], array_keys( $_POST['required'] ) );
-					$pi_plugin_infos_default['is_automatic'] = in_array( $pi_plugin_infos_default['slug'], array_keys( $_POST['activate'] ) );
+					// Create symlink
+					symlink( $pi_replace_values['local-path-to-dev-plugins'] . $pi_plugin_infos_default['slug'] . '/', getcwd() . '/wp-content/plugins/' . $pi_plugin_infos_default['slug'] );
 
-					// Pass through
-					$pi_plugin_infos[] = $pi_plugin_infos_default;
+				} else {
+
+					// Add to TGM list if set to install
+					if ( in_array( $pi_plugin_infos_default['slug'], array_keys( $_POST['install'] ) ) ) {
+
+						// Update defaults according to input
+						$pi_plugin_infos_default['force_activation'] = $pi_plugin_infos_default['required'] = in_array( $pi_plugin_infos_default['slug'], array_keys( $_POST['required'] ) );
+						$pi_plugin_infos_default['is_automatic'] = in_array( $pi_plugin_infos_default['slug'], array_keys( $_POST['activate'] ) );
+
+						// Pass through
+						$pi_plugin_infos[] = $pi_plugin_infos_default;
+
+					}
 
 				}
 
@@ -983,6 +1012,16 @@ if ( isset( $_POST['action'] ) ) {
 				pi_form_field( 'local-db-user', 'Local database user', 'text', true, '', 'root' );
 				pi_form_field( 'local-db-password', 'Local database password', 'text', true );
 				pi_form_field( 'local-domain', 'Local domain', 'text', true, '', $_SERVER['SERVER_NAME'] );
+				// @todo	Why doesn't $_SERVER['HOME'] work?
+				$pi_default_home = '';
+				foreach ( array( '/Users/steve/www-projects', '/home/gyrus/www-projects' ) as $pi_possible_home ) {
+					if ( file_exists( $pi_possible_home ) ) {
+						$pi_default_home = $pi_possible_home;
+						break;
+					}
+				}
+				pi_form_field( 'local-path-to-dev-plugins', 'Local path to plugins in development', 'text', false, '', $pi_default_home, false, true, 'If you\'re a developer of one of the plugins, enter the path here to the directory where you keep their repos, to have the option of symlinking to them instead of installing them.' );
+				pi_form_field( 'symlink-pilau-base', 'Symlink Pilau Base?', 'checkbox', false, '', true, false, true, 'Check if you have Pilau Base in your above local path.' );
 				?>
 			</ol>
 
@@ -1128,6 +1167,7 @@ if ( isset( $_POST['action'] ) ) {
 					<th scope="col"><dfn title="Check to install">Install?</dfn></th>
 					<th scope="col"><dfn title="Check to activate on installation">Activate?</dfn></th>
 					<th scope="col"><dfn title="Check to force activation">Required?</dfn></th>
+					<th scope="col"><dfn title="Check to create a symlink to local dev copy rather than install">Symlink?</dfn></th>
 				</tr>
 				</thead>
 				<tbody>
@@ -1138,6 +1178,13 @@ if ( isset( $_POST['action'] ) ) {
 						<td class="checkbox"><input type="checkbox" name="install[<?php echo $pi_plugin_infos_default['slug']; ?>]" id="install-<?php echo $pi_plugin_infos_default['slug']; ?>"<?php if ( ! empty( $pi_plugin_infos_default['required'] ) ) echo ' checked'; ?>></td>
 						<td class="checkbox"><input type="checkbox" name="activate[<?php echo $pi_plugin_infos_default['slug']; ?>]"<?php if ( ! empty( $pi_plugin_infos_default['is_automatic'] ) ) echo ' checked'; ?>></td>
 						<td class="checkbox"><input type="checkbox" name="required[<?php echo $pi_plugin_infos_default['slug']; ?>]"<?php if ( ! empty( $pi_plugin_infos_default['force_activation'] ) ) echo ' checked'; ?>></td>
+						<td class="checkbox">
+							<?php if ( $pi_plugin_infos_default['local_dev'] ) { ?>
+								<input type="checkbox" name="symlink[<?php echo $pi_plugin_infos_default['slug']; ?>]" checked>
+							<?php } else { ?>
+								&nbsp;
+							<?php } ?>
+						</td>
 					</tr>
 					<?php $alt = 1 - $alt; ?>
 				<?php } ?>
