@@ -280,6 +280,14 @@ $pi_plugin_infos_defaults = array(
 		'is_automatic'		=> true,
 		'local_dev'			=> false,
 	),
+	array(
+		'name'				=> 'Really Simple CAPTCHA',
+		'slug'				=> 'really-simple-captcha',
+		'required'			=> false,
+		'force_activation'	=> false,
+		'is_automatic'		=> true,
+		'local_dev'			=> false,
+	),
 );
 // Sort it out!
 function pi_compare_status( $a, $b ) {
