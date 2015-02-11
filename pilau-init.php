@@ -1324,25 +1324,34 @@ function pi_replace_values( $string ) {
 
 		// Set the search string
 		$replace_needle = $replace_key;
-		// First, placeholders which are just strings, no brackets
-		if ( $replace_key == 'theme-phpdoc-name' ) {
-			$replace_needle = 'Pilau_Starter';
-		} else if ( $replace_key == 'site-title' ) {
-			$replace_needle = 'Pilau Starter';
-		} else if ( $replace_key == 'theme-slug' ) {
-			$replace_needle = 'pilau-starter';
-		} else if ( $replace_key == 'theme-author' ) {
-			$replace_needle = 'Steve Taylor';
-		} else if ( substr( $replace_key, 0, 2 ) == '//' ) {
-			// These will be blocks in PHP
-			$replace_needle = '//[[' . ltrim( $replace_needle, '/' ) . ']]';
-		} else {
-			// Default bracketed placeholders
-			$replace_needle = '[[' . $replace_needle . ']]';
-		}
 
-		// Do replace
-		$string = str_replace( $replace_needle, $replace_value, $string );
+		// First, exceptions
+		if ( $replace_key == 'theme-phpdoc-name' ) {
+
+			// For the PHPDoc, need to change any Pilau Starter version numbers, too
+			$string = preg_replace( '/Pilau_Starter[[:space:]]*[0-9]+\.[0-9]+/', $replace_value . ' 0.1', $string );
+
+		} else {
+
+			// Now for the rest of the no-bracket placeholders
+			if ( $replace_key == 'site-title' ) {
+				$replace_needle = 'Pilau Starter';
+			} else if ( $replace_key == 'theme-slug' ) {
+				$replace_needle = 'pilau-starter';
+			} else if ( $replace_key == 'theme-author' ) {
+				$replace_needle = 'Steve Taylor';
+			} else if ( substr( $replace_key, 0, 2 ) == '//' ) {
+				// These will be blocks in PHP
+				$replace_needle = '//[[' . ltrim( $replace_needle, '/' ) . ']]';
+			} else {
+				// Default bracketed placeholders
+				$replace_needle = '[[' . $replace_needle . ']]';
+			}
+
+			// Do replace
+			$string = str_replace( $replace_needle, $replace_value, $string );
+
+		}
 
 	}
 
