@@ -217,8 +217,8 @@ $pi_plugin_infos_defaults = array(
 		'local_dev'			=> true,
 	),
 	array(
-		'name'				=> 'User Photo',
-		'slug'				=> 'user-photo',
+		'name'				=> 'WP User Avatar',
+		'slug'				=> 'wp-user-avatar',
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
@@ -238,14 +238,6 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> false,
 		'is_automatic'		=> false,
-		'local_dev'			=> false,
-	),
-	array(
-		'name'				=> 'MailChimp for WordPress',
-		'slug'				=> 'mailchimp-for-wp',
-		'required'			=> false,
-		'force_activation'	=> false,
-		'is_automatic'		=> true,
 		'local_dev'			=> false,
 	),
 	array(
