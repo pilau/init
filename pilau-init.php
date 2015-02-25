@@ -265,8 +265,8 @@ $pi_plugin_infos_defaults = array(
 		'local_dev'			=> false,
 	),
 	array(
-		'name'				=> 'Advanced Custom Fields',
-		'slug'				=> 'advanced-custom-fields',
+		'name'				=> 'Advanced Custom Fields Pro',
+		'slug'				=> 'advanced-custom-fields-pro',
 		'required'			=> false,
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
