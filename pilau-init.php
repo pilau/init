@@ -106,7 +106,7 @@ $pi_plugin_infos_defaults = array(
 		'required'			=> true,
 		'force_activation'	=> true,
 		'is_automatic'		=> true,
-		'local_dev'			=> false,
+		'local_dev'			=> true,
 	),
 	array(
 		'name'				=> 'Developer\'s Custom Fields',
@@ -115,6 +115,14 @@ $pi_plugin_infos_defaults = array(
 		'force_activation'	=> false,
 		'is_automatic'		=> true,
 		'local_dev'			=> true,
+	),
+	array(
+		'name'				=> 'WP Mail SMTP',
+		'slug'				=> 'wp-mail-smtp',
+		'required'			=> false,
+		'force_activation'	=> false,
+		'is_automatic'		=> true,
+		'local_dev'			=> false,
 	),
 	array(
 		'name'				=> 'Lock Pages',
