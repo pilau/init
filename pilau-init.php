@@ -94,9 +94,9 @@ $pi_plugin_infos_defaults = array(
 		'name'				=> 'GitHub Updater',
 		'slug'				=> 'github-updater',
 		'source'            => 'https://github.com/afragen/github-updater/archive/develop.zip',
-		'required'			=> false,
-		'force_activation'	=> false,
-		'is_automatic'		=> false,
+		'required'			=> true, // At least for Pilau Base
+		'force_activation'	=> true,
+		'is_automatic'		=> true,
 		'external_url'      => 'https://github.com/afragen/github-updater',
 		'local_dev'			=> false,
 	),
@@ -318,18 +318,28 @@ if ( isset( $_POST['action'] ) ) {
 			}
 
 			// Download Pilau Base or symlink?
-			if ( $pi_replace_values['local-dev-path-valid'] && $pi_replace_values['symlink-pilau-base'] && file_exists( $pi_replace_values['local-path-to-dev-plugins'] . 'pilau-base/' ) ) {
+			if ( $pi_replace_values['local-dev-path-valid'] && $pi_replace_values['symlink-pilau-base'] && file_exists( $pi_replace_values['local-path-to-dev-plugins'] . 'base/' ) ) {
 
 				// Create symlink
-				symlink( $pi_replace_values['local-path-to-dev-plugins'] . 'pilau-base/', $pi_themes_dir_public . '/pilau-base' );
+				symlink( $pi_replace_values['local-path-to-dev-plugins'] . 'base/', $pi_themes_dir_public . '/base' );
 
 			} else {
 
-				// Download and install Pilau Base theme in /public
-				$pi_pb_theme_zip = $pi_themes_dir_public . 'pilau-base.zip';
-				pi_download_file( 'https://github.com/pilau/base/archive/master.zip', $pi_pb_theme_zip );
+				/*
+				 * Download and install Pilau Base theme in /public
+				 *
+				 * - An actual tagged release is hard-coded here
+				 * - Couldn't find a way to dynamically download latest release
+				 * - Update the version tag as and when, but you'll be able to update after init
+				 * via GitHub Updater
+				 * - Downloading the master could result in glitches if master has changes that
+				 * haven't been released via tagging yet
+				 */
+				$pi_pb_theme_zip = $pi_themes_dir_public . 'base.zip';
+				$pi_base_version = '2.1.1';
+				pi_download_file( 'https://github.com/pilau/base/archive/' . $pi_base_version . '.zip', $pi_pb_theme_zip );
 				pi_unzip_archive( $pi_pb_theme_zip, $pi_themes_dir_public );
-				rename( $pi_themes_dir_public . '/base-master', $pi_themes_dir_public . '/pilau-base' );
+				rename( $pi_themes_dir_public . '/base-' . $pi_base_version, $pi_themes_dir_public . '/base' );
 
 			}
 
