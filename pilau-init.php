@@ -347,6 +347,8 @@ if ( isset( $_POST['action'] ) ) {
 			pi_unzip_archive( $pi_ps_theme_zip, $pi_root_dir );
 			// Move src
 			rename( $pi_root_dir . '/starter-master/src', $pi_root_dir . '/src' );
+			// Move public
+			rename( $pi_root_dir . '/starter-master/public', $pi_root_dir . '/public' );
 			// Remove root files not needed
 			unlink( $pi_root_dir . '/starter-master/README.md' );
 			// Move the rest
